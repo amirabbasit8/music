@@ -1,29 +1,28 @@
-name: Download YouTube as MP3 and Create Release
+name: Download YouTube MP3
 
 on:
   workflow_dispatch:
-    inputs: 
+    inputs:
       video_url:
-        description: 'YouTube Video URL'
+        description: 'YouTube URL'
         required: true
         default: 'https://www.youtube.com/watch?v=jgFYSWSF84M'
-        type: string
 
 jobs:
-  download-and-release:
+  download:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Install yt-dlp and ffmpeg
+    - name: Install FFmpeg and yt-dlp
       run: |
         sudo apt-get update
         sudo apt-get install -y ffmpeg
-        pip install yt-dlp
+        pip install --upgrade yt-dlp
+        pip install yt-dlp-ejs
     
     - name: Download as MP3
       run: |
@@ -38,35 +37,8 @@ jobs:
           --embed-thumbnail \
           "${{ github.event.inputs.video_url }}"
     
-    - name: Get video title
-      id: video_info
-      run: |
-        VIDEO_TITLE=$(yt-dlp --cookies cookies.txt --get-title "${{ github.event.inputs.video_url }}")
-        SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
-        echo "title=$SAFE_TITLE" >> $GITHUB_OUTPUT
-        echo "Downloaded: $VIDEO_TITLE"
-    
-    - name: Find MP3 file
-      id: find_mp3
-      run: |
-        MP3_FILE=$(ls *.mp3 2>/dev/null | head -n 1)
-        if [ -z "$MP3_FILE" ]; then
-          echo "No MP3 file found!"
-          exit 1
-        fi
-        echo "mp3_file=$MP3_FILE" >> $GITHUB_OUTPUT
-    
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
+    - name: Upload MP3
+      uses: actions/upload-artifact@v4
       with:
-        tag_name: "mp3-${{ github.run_number }}"
-        name: "🎵 ${{ steps.video_info.outputs.title }}"
-        body: |
-          **Video URL:** ${{ github.event.inputs.video_url }}
-          **Quality:** 320 Kbps MP3
-          **Downloaded:** $(date +'%Y-%m-%d %H:%M:%S')
-        files: ${{ steps.find_mp3.outputs.mp3_file }}
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: mp3-file
+        path: "*.mp3"
