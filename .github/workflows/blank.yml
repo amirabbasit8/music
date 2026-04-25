@@ -13,7 +13,8 @@ jobs:
   download-playlist:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write          # ✅ این خط برای آپلود در Release ضروری است
+      id-token: write          # برای احراز هویت
 
     steps:
       - name: Checkout repository
@@ -41,12 +42,13 @@ jobs:
 
       - name: Create or load download archive
         run: |
-          # اگر فایل آرشیو وجود نداره، بساز
           if [ ! -f downloaded.txt ]; then
             touch downloaded.txt
           fi
 
       - name: Download and upload videos one by one
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # ✅ توکن رو به محیط اضافه کنید
         run: |
           # ایجاد پوشه موقت برای ویدیوها
           mkdir -p temp_videos
@@ -89,7 +91,8 @@ jobs:
               --no-playlist \
               --remote-components "ejs:npm" \
               --compat-options manifest-filesize-approx \
-              "https://www.youtube.com/watch?v=$video_id"
+              "https://www.youtube.com/watch?v=$video_id" \
+              --download-archive downloaded.txt
             
             # پیدا کردن فایل دانلود شده
             VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
@@ -109,12 +112,9 @@ jobs:
                 --repo "${{ github.repository }}" \
                 --clobber
               
-              # ثبت در آرشیو
-              echo "$video_id" >> downloaded.txt
-              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_TITLE"
-              
-              # پاک کردن فایل موقت
+              # حذف فایل موقت
               rm -f "$FINAL_FILE"
+              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_TITLE"
             else
               echo "❌ خطا در دانلود ویدیو: $video_id"
             fi
@@ -148,7 +148,7 @@ jobs:
             اگر دفعه بعد دوباره این اکشن رو اجرا کنید، فقط ویدیوهای جدید دانلود می‌شن." \
             --repo "${{ github.repository }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit download archive
         run: |
