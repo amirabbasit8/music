@@ -48,7 +48,7 @@ jobs:
 
       - name: Download and upload videos one by one
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # ✅ توکن رو به محیط اضافه کنید
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # ایجاد پوشه موقت برای ویدیوها
           mkdir -p temp_videos
@@ -98,23 +98,32 @@ jobs:
             VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
             
             if [ -f "$VIDEO_FILE" ]; then
-              # گرفتن عنوان ویدیو برای اسم فایل
-              VIDEO_TITLE=$(basename "$VIDEO_FILE" .mp4)
-              SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
+              # گرفتن عنوان ویدیو برای اسم فایل (پاک کردن کاراکترهای غیرمجاز)
+              FILENAME=$(basename "$VIDEO_FILE")
+              SAFE_FILENAME=$(echo "$FILENAME" | sed 's/[\/:*?"<>|]/_/g')
               
-              # تغییر نام فایل به فرمت مناسب
-              mv "$VIDEO_FILE" "temp_videos/${SAFE_TITLE}.mp4"
-              FINAL_FILE="temp_videos/${SAFE_TITLE}.mp4"
+              # فقط اگه اسم فایل تغییر کرده، تغییر نام بده
+              if [ "$FILENAME" != "$SAFE_FILENAME" ]; then
+                mv "$VIDEO_FILE" "temp_videos/$SAFE_FILENAME"
+                FINAL_FILE="temp_videos/$SAFE_FILENAME"
+              else
+                FINAL_FILE="$VIDEO_FILE"
+              fi
               
               # آپلود فایل به Release
-              echo "📤 آپلود ویدیو: $SAFE_TITLE"
+              echo "📤 آپلود ویدیو: $SAFE_FILENAME"
               gh release upload "$TAG_NAME" "$FINAL_FILE" \
                 --repo "${{ github.repository }}" \
                 --clobber
               
+              # ثبت در آرشیو (اگر yt-dlp ثبت نکرده)
+              if ! grep -Fxq "$video_id" downloaded.txt; then
+                echo "$video_id" >> downloaded.txt
+              fi
+              
               # حذف فایل موقت
               rm -f "$FINAL_FILE"
-              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_TITLE"
+              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_FILENAME"
             else
               echo "❌ خطا در دانلود ویدیو: $video_id"
             fi
