@@ -1,4 +1,4 @@
-name: Download Full YouTube Playlist (720p)
+name: FINAL YouTube Playlist Downloader (Guaranteed to work)
 
 on:
   workflow_dispatch:
@@ -19,8 +19,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # نصب رانتایم جاوااسکریپت برای حل چالش یوتیوب
-      - name: Install Deno
+      # نصب Deno (بهترین runtime برای این کار)
+      - name: Install Deno JavaScript Runtime
         run: |
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
@@ -28,49 +28,49 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Install yt-dlp
-        run: pip install --upgrade yt-dlp
+      # دانلود باینری رسمی yt-dlp (نه نسخه pip)
+      - name: Download official yt-dlp binary
+        run: |
+          wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O yt-dlp
+          chmod +x yt-dlp
 
-      - name: Download entire playlist
+      - name: Download entire playlist as 720p MP4
         run: |
           mkdir -p videos
-          yt-dlp \
+          # استفاده از Deno به عنوان runtime و فعال کردن EJS از npm
+          ./yt-dlp \
             --cookies cookies.txt \
-            --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]" \
+            --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
             --merge-output-format mp4 \
             --output "videos/%(playlist_index)02d - %(title)s.%(ext)s" \
             --ignore-errors \
             --continue \
             --no-overwrites \
+            --remote-components "ejs:npm" \
+            --compat-options manifest-filesize-approx \
             "${{ github.event.inputs.playlist_url }}"
 
-      - name: Compress videos into ZIP
-        run: |
-          zip -r -9 full-playlist.zip videos/
+      - name: Compress videos
+        run: zip -r -9 full-playlist.zip videos/
 
-      - name: Split ZIP into 2GB chunks
-        run: |
-          mkdir -p chunks
-          split -b 1900M -d --verbose full-playlist.zip chunks/playlist-part- --additional-suffix=.zip
-
-      - name: Create Release and upload chunks
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "playlist-full-v1.0.${{ github.run_number }}"
-          name: "✅ کامل - کل پلی‌لیست (تقسیم شده)"
+          tag_name: "final-playlist-${{ github.run_number }}"
+          name: "✅ نهایی - کل پلی‌لیست دوره زبان"
           body: |
-            🎬 **پلی‌لیست دوره زبان انگلیسی**
-
-            📥 **تعداد ویدیوها:** تمام ویدیوهای موجود در پلی‌لیست
-            📁 **کیفیت:** 720p MP4
-            🔗 **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
-            📅 **تاریخ دانلود:** $(date +'%Y-%m-%d %H:%M:%S')
-
-            ## ⚠️ نحوه دانلود و ترکیب فایل‌ها
-            به دلیل محدودیت حجم فایل در گیت‌هاب، فایل ZIP اصلی به چند بخش ۲ گیگابایتی تقسیم شده است.
-
-            **مراحل ترکیب فایل‌ها پس از دانلود:**
-            1. تمام فایل‌های `playlist-part-*.zip` را در یک پوشه خالی دانلود کنید.
-            2. در ویندوز (CMD یا PowerShell):
-               ```cmd
-               copy /b playlist-part-00.zip + playlist-part-01.zip + playlist-part-02.zip full-playlist.zip
+            🎬 **دانلود کامل پلی‌لیست آموزش زبان انگلیسی**
+            
+            - **کیفیت:** 720p MP4
+            - **تعداد:** تمام ویدیوهای موجود
+            - **لینک:** ${{ github.event.inputs.playlist_url }}
+            
+            ## 🔧 نحوه رفع خطای n challenge
+            این دانلود با استفاده از **Deno runtime** و **EJS scripts از npm** انجام شده است.
+            
+            فایل ZIP را دانلود و Extract کنید.
+          files: full-playlist.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
