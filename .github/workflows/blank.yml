@@ -1,4 +1,4 @@
-name: FINAL YouTube Playlist Downloader (No Archive - Sequential Names)
+name: FINAL YouTube Playlist Downloader
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         default: 'https://www.youtube.com/playlist?list=PLZs1E3Ytd4XjRhu7xxG1AsxJ0FoZFFeqh'
         type: string
- 
+
 jobs:
   download-playlist:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ jobs:
           ./yt-dlp \
             --cookies cookies.txt \
             --flat-playlist \
-            --print "%(playlist_index)02d %(id)s" \
+            --print "%(playlist_index)s %(id)s" \
             "${{ github.event.inputs.playlist_url }}" > playlist.txt
           
           TOTAL_VIDEOS=$(wc -l < playlist.txt)
@@ -91,16 +91,13 @@ jobs:
         run: |
           TAG_NAME="playlist-v1.0.${{ github.run_number }}"
           
-          # خواندن لیست ویدیوها و دانلود یکی یکی
           while read -r number video_id; do
             echo "========================================="
             echo "📥 در حال دانلود ویدیو شماره: $number"
             echo "🆔 آیدی: $video_id"
             
-            # حذف فایل موقت قبلی اگر وجود داره
             rm -f temp_video.mp4
             
-            # دانلود ویدیو با نام موقت
             ./yt-dlp \
               --cookies cookies.txt \
               --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
@@ -111,9 +108,7 @@ jobs:
               --compat-options manifest-filesize-approx \
               "https://www.youtube.com/watch?v=$video_id"
             
-            # چک کردن اینکه فایل دانلود شده
             if [ -f "temp_video.mp4" ] && [ -s "temp_video.mp4" ]; then
-              # تغییر نام به شماره و آپلود
               FINAL_NAME="${number}.mp4"
               mv temp_video.mp4 "$FINAL_NAME"
               
@@ -122,36 +117,14 @@ jobs:
                 --repo "${{ github.repository }}" \
                 --clobber
               
-              # حذف فایل محلی
               rm -f "$FINAL_NAME"
-              echo "✅ دانلود و آپلود ویدیو شماره $number با موفقیت انجام شد"
+              echo "✅ ویدیو شماره $number با موفقیت آپلود شد"
             else
-              echo "❌ خطا در دانلود ویدیو شماره $number (آیدی: $video_id)"
-              # تلاش مجدد با کیفیت پایین‌تر
-              echo "🔄 تلاش مجدد با کیفیت پایین‌تر..."
-              ./yt-dlp \
-                --cookies cookies.txt \
-                --format "best[height<=720]" \
-                --output "temp_video.mp4" \
-                --no-playlist \
-                "https://www.youtube.com/watch?v=$video_id"
-              
-              if [ -f "temp_video.mp4" ] && [ -s "temp_video.mp4" ]; then
-                FINAL_NAME="${number}.mp4"
-                mv temp_video.mp4 "$FINAL_NAME"
-                gh release upload "$TAG_NAME" "$FINAL_NAME" \
-                  --repo "${{ github.repository }}" \
-                  --clobber
-                rm -f "$FINAL_NAME"
-                echo "✅ ویدیو شماره $number با کیفیت پایین‌تر آپلود شد"
-              else
-                echo "❌ خطا: ویدیو شماره $number قابل دانلود نیست"
-              fi
+              echo "❌ خطا در دانلود ویدیو شماره $number"
             fi
             
           done < playlist.txt
           
-          # پاکسازی نهایی
           rm -f temp_video.mp4
           echo "========================================="
           echo "🎉 همه ویدیوها با موفقیت پردازش شدند!"
@@ -172,12 +145,6 @@ jobs:
 ### 📁 فایل‌های قابل دانلود
 
 فایل‌ها با نام‌های \`1.mp4\` تا \`$TOTAL.mp4\` در بخش Assets زیر قابل مشاهده هستند.
-
-### 💡 نحوه دانلود
-
-1. به پایین صفحه بروید
-2. در بخش Assets، فایل‌های مورد نظر را دانلود کنید
-3. نام فایل‌ها به ترتیب پلی‌لیست شماره‌گذاری شده‌اند
 
 ---
 🔧 **تولید شده با:** yt-dlp + Deno runtime" \
