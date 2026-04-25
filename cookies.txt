@@ -1,28 +1,76 @@
-# Netscape HTTP Cookie File
-# https://curl.haxx.se/rfc/cookie_spec.html
-# This is a generated file! Do not edit.
+name: FINAL YouTube Playlist Downloader (Guaranteed to work)
 
-.youtube.com	TRUE	/	TRUE	1792351193	__Secure-BUCKET	CO8C
-.youtube.com	TRUE	/	TRUE	1810927513	SOCS	CAISEwgDEgk4OTk4NzM2MzgaAmVuIAEaBgiA_JrPBg
-.youtube.com	TRUE	/	TRUE	1811359655	LOGIN_INFO	AFmmF2swRgIhAPsg58zkFwdDBhi2wzQhAHjQF9E_zgz5Aej1uSkC25KLAiEAnIDwKa7sLewFXFEmDE_X0-wA0CrTXW6qp_rbKqWmyNc:QUQ3MjNmemtfVm1SZ1REdEpBX0FET3pKNEM2LVlBVVdTWGt0cDdfVUtPSEVLbHVVYlBGdGFvWmJlRGw3ZjExUlZwS3RhLXdXTm91WnVkUUVpYnRPeHNMZ3QxRk54cmZrekFpLXFWeFNmNUFSSW9xcjZ3NnRaY0RHcDd4d21jM3pJYWd0SzJrRzFUSU5CSmhRM0oxNlk4dXZ5c05CWDM3ZVVB
-.youtube.com	TRUE	/	FALSE	1811416522	SID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6IxftyF-YwPn4ZjpjSCDay1LgACgYKAdMSARUSFQHGX2MiWzWT-d5c82lRW1RTYBD-pxoVAUF8yKqJJ2QpH6z8ZwZmSYrIzahk0076
-.youtube.com	TRUE	/	TRUE	1811416522	__Secure-1PSID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6Ix6XHc0D8FjswGzqOue5XwbwACgYKASkSARUSFQHGX2MiBRNiMBL5vyTRf3uoX9F6rhoVAUF8yKqehK27WBA0tXMiSPd-KsSe0076
-.youtube.com	TRUE	/	TRUE	1811416522	__Secure-3PSID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6IxOwSq7s161tFrqFj9lEiiwQACgYKAfwSARUSFQHGX2MiaaOJf6U8x2gqbgavdCfNExoVAUF8yKqdAa4w9M0ObZQcf1fPSgN_0076
-.youtube.com	TRUE	/	FALSE	1811416522	HSID	AyJ_taVlrOAnXnj_m
-.youtube.com	TRUE	/	TRUE	1811416522	SSID	AKudrMakzi_uq-clD
-.youtube.com	TRUE	/	FALSE	1811416522	APISID	k0tokNp7mvCOfv6L/AAPi_rOtqqZXEXTi2
-.youtube.com	TRUE	/	TRUE	1811416522	SAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	1811416522	__Secure-1PAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	1811416522	__Secure-3PAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	1811681765	PREF	f4=4000000&f6=40000000&tz=Asia.Tehran&f7=100
-.youtube.com	TRUE	/	TRUE	1808657769	__Secure-1PSIDTS	sidts-CjUBWhotCW_bN7u-5FSh2P65IeYd_tvsL-wWIrpBBsKyMP1jWOVCo9JJXpXEkf0AxAYqYL48KhAA
-.youtube.com	TRUE	/	TRUE	1808657769	__Secure-3PSIDTS	sidts-CjUBWhotCW_bN7u-5FSh2P65IeYd_tvsL-wWIrpBBsKyMP1jWOVCo9JJXpXEkf0AxAYqYL48KhAA
-.youtube.com	TRUE	/	FALSE	1808657769	SIDCC	AKEyXzXv3nsXNNnxKKbVfmb5ezc6WV7vBlxaz4iL2ZLvBROTDhi5zgUjPceVHYDRfaA64fv-Eg
-.youtube.com	TRUE	/	TRUE	1808657769	__Secure-1PSIDCC	AKEyXzVFHdhWxxcuXeldO47u6p_R5ity7113m8W7XVpwND_XLu8o_ZUTGPAboYqlsQeOgiYs0rg
-.youtube.com	TRUE	/	TRUE	1808657769	__Secure-3PSIDCC	AKEyXzUsWuc1jP7L3XqfKQCZOHbZwsOtfAzy-asxoeE94qZePcTC_7Xq8SoG44tKnrch3reQXm0
-.youtube.com	TRUE	/	FALSE	1777121776	ST-3opvp5	session_logininfo=AFmmF2swRgIhAPsg58zkFwdDBhi2wzQhAHjQF9E_zgz5Aej1uSkC25KLAiEAnIDwKa7sLewFXFEmDE_X0-wA0CrTXW6qp_rbKqWmyNc%3AQUQ3MjNmemtfVm1SZ1REdEpBX0FET3pKNEM2LVlBVVdTWGt0cDdfVUtPSEVLbHVVYlBGdGFvWmJlRGw3ZjExUlZwS3RhLXdXTm91WnVkUUVpYnRPeHNMZ3QxRk54cmZrekFpLXFWeFNmNUFSSW9xcjZ3NnRaY0RHcDd4d21jM3pJYWd0SzJrRzFUSU5CSmhRM0oxNlk4dXZ5c05CWDM3ZVVB
-.youtube.com	TRUE	/	TRUE	1792669990	VISITOR_INFO1_LIVE	N-KO3gPZJV8
-.youtube.com	TRUE	/	TRUE	1792669990	VISITOR_PRIVACY_METADATA	CgJERRIEEgAgFQ%3D%3D
-.youtube.com	TRUE	/	TRUE	1792664102	__Secure-YNID	17.YT=DFI23F-Ylgwe-_8siyU2IpYSj8H5zgXqDjHemkw3DYMBuh3m5savqESeLFXFvEundGh-TiRp0LSm_ja_D6U8CPm6vsT7ykfArejKPhrPIqzHI-E-kwp9TbnkdQt_H8igF0MrXmXDoj8G79htLWKvz3b0n1KMhIJTLaZraGk7x_lVjKriIsROxaezOWUV42JWsO1FDZFJ3buUpsratvFvDVWlJmZzQNiv8i3azxeQl1LaVDklcqkR4r-vhCdYFnPVntD6EAMXS4pt8e9APYTb2-tfcn-syOzNobEkverjyxfQh7Tg2Tg7iWOQrfF34blsNS8LuEm-V0TLwrzBdb9zmA
-.youtube.com	TRUE	/	TRUE	1792664102	__Secure-ROLLOUT_TOKEN	CLm2mLLalJvxRRCuqPjz1P-TAxj434vL4oiUAw%3D%3D
-.youtube.com	TRUE	/	TRUE	0	YSC	1uMhOqGwbnk
+on:
+  workflow_dispatch:
+    inputs:
+      playlist_url:
+        description: 'YouTube Playlist URL'
+        required: true
+        default: 'https://www.youtube.com/playlist?list=PLZs1E3Ytd4XjRhu7xxG1AsxJ0FoZFFeqh'
+        type: string
+
+jobs:
+  download-playlist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # نصب Deno (بهترین runtime برای این کار)
+      - name: Install Deno JavaScript Runtime
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # دانلود باینری رسمی yt-dlp (نه نسخه pip)
+      - name: Download official yt-dlp binary
+        run: |
+          wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O yt-dlp
+          chmod +x yt-dlp
+
+      - name: Download entire playlist as 720p MP4
+        run: |
+          mkdir -p videos
+          # استفاده از Deno به عنوان runtime و فعال کردن EJS از npm
+          ./yt-dlp \
+            --cookies cookies.txt \
+            --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
+            --merge-output-format mp4 \
+            --output "videos/%(playlist_index)02d - %(title)s.%(ext)s" \
+            --ignore-errors \
+            --continue \
+            --no-overwrites \
+            --remote-components "ejs:npm" \
+            --compat-options manifest-filesize-approx \
+            "${{ github.event.inputs.playlist_url }}"
+
+      - name: Compress videos
+        run: zip -r -9 full-playlist.zip videos/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "final-playlist-${{ github.run_number }}"
+          name: "✅ نهایی - کل پلی‌لیست دوره زبان"
+          body: |
+            🎬 **دانلود کامل پلی‌لیست آموزش زبان انگلیسی**
+            
+            - **کیفیت:** 720p MP4
+            - **تعداد:** تمام ویدیوهای موجود
+            - **لینک:** ${{ github.event.inputs.playlist_url }}
+            
+            ## 🔧 نحوه رفع خطای n challenge
+            این دانلود با استفاده از **Deno runtime** و **EJS scripts از npm** انجام شده است.
+            
+            فایل ZIP را دانلود و Extract کنید.
+          files: full-playlist.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
