@@ -1,4 +1,4 @@
-name: FINAL YouTube Playlist Downloader (Guaranteed to work)
+name: FINAL YouTube Playlist Downloader (No Archive)
 
 on:
   workflow_dispatch:
@@ -13,8 +13,8 @@ jobs:
   download-playlist:
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # ✅ این خط برای آپلود در Release ضروری است
-      id-token: write          # برای احراز هویت
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -40,129 +40,95 @@ jobs:
           wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O yt-dlp
           chmod +x yt-dlp
 
-      - name: Create or load download archive
-        run: |
-          if [ ! -f downloaded.txt ]; then
-            touch downloaded.txt
-          fi
-
       - name: Download and upload videos one by one
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # ایجاد پوشه موقت برای ویدیوها
+          # ایجاد پوشه موقت
           mkdir -p temp_videos
           
-          # دریافت لیست ویدیوهای پلی‌لیست
+          # دریافت لیست ویدیوهای پلی‌لیست با شماره و آیدی
           ./yt-dlp \
             --cookies cookies.txt \
             --flat-playlist \
-            --print "%(id)s" \
-            "${{ github.event.inputs.playlist_url }}" > video_ids.txt
+            --print "%(playlist_index)02d %(id)s" \
+            "${{ github.event.inputs.playlist_url }}" > video_list.txt
           
-          # ایجاد یا استفاده از Release موجود
+          # ایجاد Release جدید
           TAG_NAME="playlist-v1.0.${{ github.run_number }}"
-          RELEASE_NAME="🎬 دوره کامل زبان انگلیسی - دانلود تکی"
+          RELEASE_NAME="🎬 دوره کامل زبان انگلیسی - 720p MP4"
           
-          # چک کن Release وجود داره یا نه
-          if ! gh release view "$TAG_NAME" --repo "${{ github.repository }}" &>/dev/null; then
-            gh release create "$TAG_NAME" \
-              --title "$RELEASE_NAME" \
-              --notes "## 📚 دانلود پلی‌لیست آموزش زبان انگلیسی - ویدیوهای تکی\n\n**کیفیت:** 720p MP4\n**لینک:** ${{ github.event.inputs.playlist_url }}\n\nویدیوها به صورت تکی آپلود می‌شن." \
-              --repo "${{ github.repository }}"
-          fi
+          gh release create "$TAG_NAME" \
+            --title "$RELEASE_NAME" \
+            --notes "## 📚 دانلود پلی‌لیست آموزش زبان انگلیسی
+          
+**کیفیت:** 720p MP4
+**تعداد ویدیوها:** $(wc -l < video_list.txt)
+**لینک:** ${{ github.event.inputs.playlist_url }}
+
+---
+### 📌 نحوه دانلود
+فایل‌ها با نام **1.mp4**، **2.mp4**، ... تا آخر شماره‌گذاری شده‌اند." \
+            --repo "${{ github.repository }}"
           
           # دانلود و آپلود هر ویدیو
-          while IFS= read -r video_id; do
-            # چک کن آیا قبلاً دانلود شده
-            if grep -Fxq "$video_id" downloaded.txt; then
-              echo "⏭️ رد شدن از ویدیو قبلاً دانلود شده: $video_id"
-              continue
-            fi
+          while IFS=' ' read -r number video_id; do
+            echo "========================================"
+            echo "📥 در حال دانلود ویدیو شماره: $number"
+            echo "🆔 آیدی: $video_id"
             
-            echo "📥 در حال دانلود ویدیو: $video_id"
-            
-            # دانلود ویدیو
+            # دانلود ویدیو با نام شماره‌دار
             ./yt-dlp \
               --cookies cookies.txt \
               --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
               --merge-output-format mp4 \
-              --output "temp_videos/%(title)s.%(ext)s" \
+              --output "temp_videos/${number}.mp4" \
               --no-playlist \
               --remote-components "ejs:npm" \
               --compat-options manifest-filesize-approx \
-              "https://www.youtube.com/watch?v=$video_id" \
-              --download-archive downloaded.txt
+              "https://www.youtube.com/watch?v=$video_id"
             
-            # پیدا کردن فایل دانلود شده
-            VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
-            
-            if [ -f "$VIDEO_FILE" ]; then
-              # گرفتن عنوان ویدیو برای اسم فایل (پاک کردن کاراکترهای غیرمجاز)
-              FILENAME=$(basename "$VIDEO_FILE")
-              SAFE_FILENAME=$(echo "$FILENAME" | sed 's/[\/:*?"<>|]/_/g')
-              
-              # فقط اگه اسم فایل تغییر کرده، تغییر نام بده
-              if [ "$FILENAME" != "$SAFE_FILENAME" ]; then
-                mv "$VIDEO_FILE" "temp_videos/$SAFE_FILENAME"
-                FINAL_FILE="temp_videos/$SAFE_FILENAME"
-              else
-                FINAL_FILE="$VIDEO_FILE"
-              fi
-              
-              # آپلود فایل به Release
-              echo "📤 آپلود ویدیو: $SAFE_FILENAME"
-              gh release upload "$TAG_NAME" "$FINAL_FILE" \
+            # چک کردن فایل دانلود شده
+            if [ -f "temp_videos/${number}.mp4" ]; then
+              # آپلود فایل
+              echo "📤 آپلود ویدیو شماره $number"
+              gh release upload "$TAG_NAME" "temp_videos/${number}.mp4" \
                 --repo "${{ github.repository }}" \
                 --clobber
               
-              # ثبت در آرشیو (اگر yt-dlp ثبت نکرده)
-              if ! grep -Fxq "$video_id" downloaded.txt; then
-                echo "$video_id" >> downloaded.txt
-              fi
-              
               # حذف فایل موقت
-              rm -f "$FINAL_FILE"
-              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_FILENAME"
+              rm -f "temp_videos/${number}.mp4"
+              echo "✅ ویدیو شماره $number با موفقیت آپلود شد"
             else
-              echo "❌ خطا در دانلود ویدیو: $video_id"
+              echo "❌ خطا در دانلود ویدیو شماره $number"
             fi
             
-            echo "-----------------------------------"
-          done < video_ids.txt
+          done < video_list.txt
           
           # پاک کردن پوشه موقت
           rm -rf temp_videos
+          rm -f video_list.txt
           
-          echo "🎉 همه ویدیوها پردازش شدن!"
+          echo "========================================"
+          echo "🎉 همه ویدیوها با موفقیت آپلود شدن!"
 
-      - name: Update Release body with completion info
+      - name: Update Release with completion info
         run: |
-          TOTAL=$(wc -l < video_ids.txt)
-          DOWNLOADED=$(wc -l < downloaded.txt)
+          TOTAL=$(gh release view "playlist-v1.0.${{ github.run_number }}" --repo "${{ github.repository }}" --json assets -q '.assets | length')
           gh release edit "playlist-v1.0.${{ github.run_number }}" \
             --notes "## ✅ تکمیل شد!
             
-            **تعداد کل ویدیوها:** $TOTAL
-            **تعداد دانلود شده:** $DOWNLOADED
-            **کیفیت:** 720p MP4
-            **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
-            
-            ---
-            
-            ### 📌 نحوه دانلود
-            هر ویدیو به صورت جداگانه در بخش Assets قابل دانلود است.
-            
-            ### 🔄 ادامه دانلود
-            اگر دفعه بعد دوباره این اکشن رو اجرا کنید، فقط ویدیوهای جدید دانلود می‌شن." \
+**تعداد کل ویدیوها:** $TOTAL
+**کیفیت:** 720p MP4
+**فرمت نامگذاری:** 1.mp4, 2.mp4, ...
+**لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
+
+---
+### 📥 نحوه دانلود
+همه ویدیوها در بخش Assets قابل دانلود هستند. اسم فایل‌ها به صورت **شماره.mp4** است.
+
+### 💡 نکته
+برای دانلود همه ویدیوها می‌توانید از ابزارهای دانلود منیجر استفاده کنید." \
             --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Commit download archive
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add downloaded.txt
-          git commit -m "Update download archive" || echo "No changes to commit"
-          git push
