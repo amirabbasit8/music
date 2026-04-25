@@ -51,36 +51,39 @@ jobs:
         run: |
           mkdir -p temp_videos
           
-          # دریافت لیست ویدیوها با ایندکس و آی‌دی (بدون عنوان در این مرحله)
+          # دریافت لیست ویدیوها از 125 به بعد
           ./yt-dlp \
             --cookies cookies.txt \
             --flat-playlist \
             --print "%(playlist_index)02d %(id)s" \
+            --playlist-start 125 \
             "${{ github.event.inputs.playlist_url }}" > video_list.txt
+          
+          echo "🎯 دانلود از ویدیو شماره 125 شروع میشه. تعداد: $(wc -l < video_list.txt) ویدیو"
+          cat video_list.txt
           
           # ایجاد Release
           TAG_NAME="playlist-v1.0.${{ github.run_number }}"
           if ! gh release view "$TAG_NAME" --repo "${{ github.repository }}" &>/dev/null; then
             gh release create "$TAG_NAME" \
-              --title "🎬 دوره کامل زبان انگلیسی - ویدیوهای تکی" \
-              --notes "ویدیوها با شماره‌گذاری از 01 تا 128" \
+              --title "🎬 دوره کامل زبان انگلیسی - ادامه از ویدیو 125" \
+              --notes "دانلود از ویدیو 125 تا آخر" \
               --repo "${{ github.repository }}"
           fi
           
           # دانلود و آپلود هر ویدیو
           while read -r idx video_id; do
             # چک کردن آرشیو
-            if grep -Fxq "$video_id" downloaded.txt; then
-              echo "⏭️ رد شدن ویدیو شماره $idx: $video_id"
+            if grep -Fxq "$video_id" downloaded.txt 2>/dev/null; then
+              echo "⏭️ رد شدن ویدیو شماره $idx: $video_id (قبلاً دانلود شده)"
               continue
             fi
             
             echo "📥 دانلود ویدیو شماره $idx: $video_id"
             
-            # پاک کردن پوشه موقت
             rm -rf temp_videos/*
             
-            # دریافت عنوان ویدیو برای اسم فایل (اجرای جداگانه)
+            # دریافت عنوان ویدیو
             VIDEO_TITLE=$(./yt-dlp --cookies cookies.txt --get-title "https://www.youtube.com/watch?v=$video_id" 2>/dev/null | head -n1)
             SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g' | cut -c1-100)
             
@@ -92,29 +95,20 @@ jobs:
               --output "temp_videos/%(title)s.%(ext)s" \
               --no-playlist \
               --remote-components "ejs:npm" \
-              --compat-options manifest-filesize-approx \
               "https://www.youtube.com/watch?v=$video_id"
             
-            # پیدا کردن فایل دانلود شده
             VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
             
             if [ -f "$VIDEO_FILE" ]; then
-              # ساخت اسم جدید: 01 - عنوان.mp4
               NEW_NAME="${idx} - ${SAFE_TITLE}.mp4"
-              
-              # حذف فایل با همین اسم اگر وجود داشته باشد
               rm -f "temp_videos/$NEW_NAME"
-              
-              # تغییر نام فایل
               mv "$VIDEO_FILE" "temp_videos/$NEW_NAME"
               
-              # آپلود به Release
               echo "📤 آپلود: $NEW_NAME"
               gh release upload "$TAG_NAME" "temp_videos/$NEW_NAME" \
                 --repo "${{ github.repository }}" \
                 --clobber
               
-              # ثبت در آرشیو
               echo "$video_id" >> downloaded.txt
               echo "✅ آپلود شد: $NEW_NAME"
             else
@@ -125,7 +119,7 @@ jobs:
           done < video_list.txt
           
           rm -rf temp_videos
-          echo "🎉 همه ویدیوها دانلود و آپلود شدن!"
+          echo "🎉 دانلود و آپلود ویدیوهای 125 تا پایان کامل شد!"
 
       - name: Commit download archive
         run: |
