@@ -19,6 +19,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /opt/hostedtoolcache
+          df -h /
+
       - name: Install Deno JavaScript Runtime
         run: |
           curl -fsSL https://deno.land/install.sh | sh
@@ -87,7 +96,7 @@ jobs:
             VIDEO_TITLE=$(./yt-dlp --cookies cookies.txt --get-title "https://www.youtube.com/watch?v=$video_id" 2>/dev/null | head -n1)
             SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g' | cut -c1-100)
             
-            # دانلود ویدیو
+            # دانلود ویدیو با تنظیمات ضد محدودیت یوتیوب
             ./yt-dlp \
               --cookies cookies.txt \
               --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
@@ -95,6 +104,16 @@ jobs:
               --output "temp_videos/%(title)s.%(ext)s" \
               --no-playlist \
               --remote-components "ejs:npm" \
+              --retries 30 \
+              --fragment-retries 30 \
+              --retry-sleep "exp=2:60:2" \
+              --sleep-interval 20 \
+              --max-sleep-interval 35 \
+              --sleep-interval-requests 3 \
+              --limit-rate 1.5M \
+              --socket-timeout 90 \
+              --no-check-certificates \
+              --extractor-args "youtube:player_client=android,web" \
               "https://www.youtube.com/watch?v=$video_id"
             
             VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
@@ -111,8 +130,13 @@ jobs:
               
               echo "$video_id" >> downloaded.txt
               echo "✅ آپلود شد: $NEW_NAME"
+              
+              # تاخیر اضافی بین آپلود و دانلود بعدی
+              echo "⏳ استراحت 30 ثانیه قبل از ویدیو بعدی..."
+              sleep 30
             else
               echo "❌ خطا در دانلود ویدیو: $video_id"
+              echo "$video_id" >> failed.txt
             fi
             
             echo "-----------------------------------"
@@ -120,11 +144,16 @@ jobs:
           
           rm -rf temp_videos
           echo "🎉 دانلود و آپلود ویدیوهای 125 تا پایان کامل شد!"
+          
+          if [ -f failed.txt ]; then
+            echo "⚠️ ویدیوهای ناموفق:"
+            cat failed.txt
+          fi
 
       - name: Commit download archive
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add downloaded.txt
+          git add downloaded.txt failed.txt 2>/dev/null || true
           git commit -m "Update download archive" || echo "No changes to commit"
           git push
