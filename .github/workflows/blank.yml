@@ -25,41 +25,6 @@ jobs:
         sudo apt-get install -y ffmpeg
         pip install yt-dlp
     
-    - name: Create cookies file
-      run: |
-        cat > cookies.txt << 'EOF'
-# Netscape HTTP Cookie File
-.youtube.com	TRUE	/	TRUE	0	__Secure-BUCKET	CO8C
-.youtube.com	TRUE	/	TRUE	0	SOCS	CAISEwgDEgk4OTk4NzM2MzgaAmVuIAEaBgiA_JrPBg
-.youtube.com	TRUE	/	TRUE	0	LOGIN_INFO	AFmmF2swRgIhAPsg58zkFwdDBhi2wzQhAHjQF9E_zgz5Aej1uSkC25KLAiEAnIDwKa7sLewFXFEmDE_X0-wA0CrTXW6qp_rbKqWmyNc:QUQ3MjNmemtfVm1SZ1REdEpBX0FET3pKNEM2LVlBVVdTWGt0cDdfVUtPSEVLbHVVYlBGdGFvWmJlRGw3ZjExUlZwS3RhLXdXTm91WnVkUUVpYnRPeHNMZ3QxRk54cmZrekFpLXFWeFNmNUFSSW9xcjZ3NnRaY0RHcDd4d21jM3pJYWd0SzJrRzFUSU5CSmhRM0oxNlk4dXZ5c05CWDM3ZVVB
-.youtube.com	TRUE	/	TRUE	0	SID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6IxftyF-YwPn4ZjpjSCDay1LgACgYKAdMSARUSFQHGX2MiWzWT-d5c82lRW1RTYBD-pxoVAUF8yKqJJ2QpH6z8ZwZmSYrIzahk0076
-.youtube.com	TRUE	/	TRUE	0	__Secure-1PSID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6Ix6XHc0D8FjswGzqOue5XwbwACgYKASkSARUSFQHGX2MiBRNiMBL5vyTRf3uoX9F6rhoVAUF8yKqehK27WBA0tXMiSPd-KsSe0076
-.youtube.com	TRUE	/	TRUE	0	__Secure-3PSID	g.a0009Aje_YHDEJNZbb8EFeIEsOgobjTQtcnq-RMZ9AvRsrjsX6IxOwSq7s161tFrqFj9lEiiwQACgYKAfwSARUSFQHGX2MiaaOJf6U8x2gqbgavdCfNExoVAUF8yKqdAa4w9M0ObZQcf1fPSgN_0076
-.youtube.com	TRUE	/	TRUE	0	HSID	AyJ_taVlrOAnXnj_m
-.youtube.com	TRUE	/	TRUE	0	SSID	AKudrMakzi_uq-clD
-.youtube.com	TRUE	/	TRUE	0	APISID	k0tokNp7mvCOfv6L/AAPi_rOtqqZXEXTi2
-.youtube.com	TRUE	/	TRUE	0	SAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	0	__Secure-1PAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	0	__Secure-3PAPISID	3br5EQDmquZJ9f5Q/AIJCLarRu8S7QJQRC
-.youtube.com	TRUE	/	TRUE	0	PREF	f4=4000000&f6=40000000&tz=Asia.Tehran&f7=100
-.youtube.com	TRUE	/	TRUE	0	__Secure-1PSIDTS	sidts-CjUBWhotCRSfeugLrlaauR2NC7geHSSZCRzKFQfVHJuGSfboI6qPKHn6txRc00IItuIUFBkQ_hAA
-.youtube.com	TRUE	/	TRUE	0	__Secure-3PSIDTS	sidts-CjUBWhotCRSfeugLrlaauR2NC7geHSSZCRzKFQfVHJuGSfboI6qPKHn6txRc00IItuIUFBkQ_hAA
-.youtube.com	TRUE	/	TRUE	0	SIDCC	AKEyXzWVhtQftw8CaVQ1FBSvCMbL3XcZDZBoTRLmrxLHXiJp7Jcah4KOjx1UG6f8b6QxHjLG8g
-.youtube.com	TRUE	/	TRUE	0	__Secure-1PSIDCC	AKEyXzVLWm8SZrBDhCw1SxYRX52UD4QCKDk9h1yc5_jTj0VbmxRt8dAusfAzkmU3mnr9AdBLp-o
-.youtube.com	TRUE	/	TRUE	0	__Secure-3PSIDCC	AKEyXzWWnI2F-JYQzWiU4zjXmWPyR2Cjwv99be2u65rUDWa5ZMM2aI6khs5vPFFA620xuhNWxwI
-.youtube.com	TRUE	/	TRUE	0	VISITOR_INFO1_LIVE	N-KO3gPZJV8
-.youtube.com	TRUE	/	TRUE	0	VISITOR_PRIVACY_METADATA	CgJERRIEEgAgFQ%3D%3D
-EOF
-      shell: bash
-    
-    - name: Get video info
-      id: video_info
-      run: |
-        VIDEO_TITLE=$(yt-dlp --cookies cookies.txt --get-title "${{ github.event.inputs.video_url }}")
-        SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
-        echo "title=$SAFE_TITLE" >> $GITHUB_OUTPUT
-        echo "Downloading: $VIDEO_TITLE"
-    
     - name: Download as MP3
       run: |
         yt-dlp \
@@ -73,6 +38,14 @@ EOF
           --embed-thumbnail \
           "${{ github.event.inputs.video_url }}"
     
+    - name: Get video title
+      id: video_info
+      run: |
+        VIDEO_TITLE=$(yt-dlp --cookies cookies.txt --get-title "${{ github.event.inputs.video_url }}")
+        SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
+        echo "title=$SAFE_TITLE" >> $GITHUB_OUTPUT
+        echo "Downloaded: $VIDEO_TITLE"
+    
     - name: Find MP3 file
       id: find_mp3
       run: |
@@ -82,23 +55,16 @@ EOF
           exit 1
         fi
         echo "mp3_file=$MP3_FILE" >> $GITHUB_OUTPUT
-        echo "Found: $MP3_FILE"
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: "v1.0.${{ github.run_number }}"
-        name: "MP3 - ${{ steps.video_info.outputs.title }}"
+        tag_name: "mp3-${{ github.run_number }}"
+        name: "🎵 ${{ steps.video_info.outputs.title }}"
         body: |
-          ## 🎵 MP3 downloaded from YouTube
-          
-          - **Title:** ${{ steps.video_info.outputs.title }}
-          - **URL:** ${{ github.event.inputs.video_url }}
-          - **Quality:** 320 Kbps MP3
-          - **Build:** #${{ github.run_number }}
-          
-          ### Download:
-          The MP3 file is available in the Assets section below.
+          **Video URL:** ${{ github.event.inputs.video_url }}
+          **Quality:** 320 Kbps MP3
+          **Downloaded:** $(date +'%Y-%m-%d %H:%M:%S')
         files: ${{ steps.find_mp3.outputs.mp3_file }}
         draft: false
         prerelease: false
