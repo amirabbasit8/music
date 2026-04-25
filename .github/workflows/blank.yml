@@ -1,56 +1,76 @@
-name: YouTube MP3 Downloader (Fully Fixed)
+name: Download Full YouTube Playlist (720p)
 
 on:
   workflow_dispatch:
     inputs:
-      video_url:
-        description: 'YouTube Video URL'
+      playlist_url:
+        description: 'YouTube Playlist URL'
         required: true
-        default: 'https://www.youtube.com/watch?v=jgFYSWSF84M'
+        default: 'https://www.youtube.com/playlist?list=PLZs1E3Ytd4XjRhu7xxG1AsxJ0FoZFFeqh'
+        type: string
 
 jobs:
-  download:
+  download-playlist:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1. نصب Deno (برای حل چالش جاوااسکریپت یوتیوب)
-      - name: Install Deno Runtime
+      # نصب رانتایم جاوااسکریپت برای حل چالش یوتیوب
+      - name: Install Deno
         run: |
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
 
-      # 2. نصب ffmpeg
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      # 3. دانلود آخرین نسخه Nightly yt-dlp (بسیار مهم)
-      - name: Install Latest yt-dlp Nightly
-        run: |
-          pip install --upgrade pip
-          pip install --pre "yt-dlp[default]"
+      - name: Install yt-dlp
+        run: pip install --upgrade yt-dlp
 
-      # 4. دانلود ویدیو
-      - name: Download as MP3
+      - name: Download entire playlist
         run: |
+          mkdir -p videos
           yt-dlp \
             --cookies cookies.txt \
-            --extract-audio \
-            --audio-format mp3 \
-            --audio-quality 320K \
-            --output "%(title)s.%(ext)s" \
-            --no-playlist \
-            --add-metadata \
-            --embed-thumbnail \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
-            --extractor-args "youtube:player_client=android,web" \
-            "${{ github.event.inputs.video_url }}"
+            --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]" \
+            --merge-output-format mp4 \
+            --output "videos/%(playlist_index)02d - %(title)s.%(ext)s" \
+            --ignore-errors \
+            --continue \
+            --no-overwrites \
+            "${{ github.event.inputs.playlist_url }}"
 
-      # 5. آپلود فایل
-      - name: Upload MP3
-        uses: actions/upload-artifact@v4
+      - name: Compress videos into ZIP
+        run: |
+          zip -r -9 full-playlist.zip videos/
+
+      - name: Split ZIP into 2GB chunks
+        run: |
+          mkdir -p chunks
+          split -b 1900M -d --verbose full-playlist.zip chunks/playlist-part- --additional-suffix=.zip
+
+      - name: Create Release and upload chunks
+        uses: softprops/action-gh-release@v1
         with:
-          name: "Final-MP3"
-          path: "*.mp3"
-          retention-days: 7
+          tag_name: "playlist-full-v1.0.${{ github.run_number }}"
+          name: "✅ کامل - کل پلی‌لیست (تقسیم شده)"
+          body: |
+            🎬 **پلی‌لیست دوره زبان انگلیسی**
+
+            📥 **تعداد ویدیوها:** تمام ویدیوهای موجود در پلی‌لیست
+            📁 **کیفیت:** 720p MP4
+            🔗 **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
+            📅 **تاریخ دانلود:** $(date +'%Y-%m-%d %H:%M:%S')
+
+            ## ⚠️ نحوه دانلود و ترکیب فایل‌ها
+            به دلیل محدودیت حجم فایل در گیت‌هاب، فایل ZIP اصلی به چند بخش ۲ گیگابایتی تقسیم شده است.
+
+            **مراحل ترکیب فایل‌ها پس از دانلود:**
+            1. تمام فایل‌های `playlist-part-*.zip` را در یک پوشه خالی دانلود کنید.
+            2. در ویندوز (CMD یا PowerShell):
+               ```cmd
+               copy /b playlist-part-00.zip + playlist-part-01.zip + playlist-part-02.zip full-playlist.zip
