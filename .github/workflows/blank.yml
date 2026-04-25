@@ -27,63 +27,133 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh
+
       - name: Download official yt-dlp binary
         run: |
           wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O yt-dlp
           chmod +x yt-dlp
 
-      - name: Download entire playlist as 720p MP4
+      - name: Create or load download archive
         run: |
-          mkdir -p videos
+          # اگر فایل آرشیو وجود نداره، بساز
+          if [ ! -f downloaded.txt ]; then
+            touch downloaded.txt
+          fi
+
+      - name: Download and upload videos one by one
+        run: |
+          # ایجاد پوشه موقت برای ویدیوها
+          mkdir -p temp_videos
+          
+          # دریافت لیست ویدیوهای پلی‌لیست
           ./yt-dlp \
             --cookies cookies.txt \
-            --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
-            --merge-output-format mp4 \
-            --output "videos/%(playlist_index)02d - %(title)s.%(ext)s" \
-            --ignore-errors \
-            --continue \
-            --no-overwrites \
-            --remote-components "ejs:npm" \
-            --compat-options manifest-filesize-approx \
-            "${{ github.event.inputs.playlist_url }}"
-
-      - name: Compress and split videos into 2GB chunks
-        run: |
-          # فشرده‌سازی کل ویدیوها
-          zip -r -9 full-playlist.zip videos/
+            --flat-playlist \
+            --print "%(id)s" \
+            "${{ github.event.inputs.playlist_url }}" > video_ids.txt
           
-          # تقسیم فایل به بخش‌های 1900 مگابایتی (کمی کمتر از 2 گیگ برای احتیاط)
-          mkdir -p release_chunks
-          split -b 1900M -d full-playlist.zip release_chunks/playlist-part- --additional-suffix=.zip
+          # ایجاد یا استفاده از Release موجود
+          TAG_NAME="playlist-v1.0.${{ github.run_number }}"
+          RELEASE_NAME="🎬 دوره کامل زبان انگلیسی - دانلود تکی"
           
-          # برای بخش اول که شماره 00 داره، یه کپی با اسم معمولی هم می‌سازیم
-          cp release_chunks/playlist-part-00.zip release_chunks/playlist-part-first.zip
+          # چک کن Release وجود داره یا نه
+          if ! gh release view "$TAG_NAME" --repo "${{ github.repository }}" &>/dev/null; then
+            gh release create "$TAG_NAME" \
+              --title "$RELEASE_NAME" \
+              --notes "## 📚 دانلود پلی‌لیست آموزش زبان انگلیسی - ویدیوهای تکی\n\n**کیفیت:** 720p MP4\n**لینک:** ${{ github.event.inputs.playlist_url }}\n\nویدیوها به صورت تکی آپلود می‌شن." \
+              --repo "${{ github.repository }}"
+          fi
           
-          echo "✅ فایل اصلی به این تعداد بخش تقسیم شد: $(ls release_chunks/*.zip | wc -l)"
-          ls -lh release_chunks/
-
-      - name: Create Release and upload all chunks
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: "playlist-v1.0.${{ github.run_number }}"
-          name: "🎬 دوره کامل زبان انگلیسی - 720p MP4"
-          body: |
-            ## 📚 دانلود کامل پلی‌لیست آموزش زبان انگلیسی
+          # دانلود و آپلود هر ویدیو
+          while IFS= read -r video_id; do
+            # چک کن آیا قبلاً دانلود شده
+            if grep -Fxq "$video_id" downloaded.txt; then
+              echo "⏭️ رد شدن از ویدیو قبلاً دانلود شده: $video_id"
+              continue
+            fi
             
-            **کیفیت:** 720p MP4  
-            **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}  
-            **تاریخ دانلود:** $(date +'%Y-%m-%d %H:%M:%S')
+            echo "📥 در حال دانلود ویدیو: $video_id"
+            
+            # دانلود ویدیو
+            ./yt-dlp \
+              --cookies cookies.txt \
+              --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
+              --merge-output-format mp4 \
+              --output "temp_videos/%(title)s.%(ext)s" \
+              --no-playlist \
+              --remote-components "ejs:npm" \
+              --compat-options manifest-filesize-approx \
+              "https://www.youtube.com/watch?v=$video_id"
+            
+            # پیدا کردن فایل دانلود شده
+            VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
+            
+            if [ -f "$VIDEO_FILE" ]; then
+              # گرفتن عنوان ویدیو برای اسم فایل
+              VIDEO_TITLE=$(basename "$VIDEO_FILE" .mp4)
+              SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
+              
+              # تغییر نام فایل به فرمت مناسب
+              mv "$VIDEO_FILE" "temp_videos/${SAFE_TITLE}.mp4"
+              FINAL_FILE="temp_videos/${SAFE_TITLE}.mp4"
+              
+              # آپلود فایل به Release
+              echo "📤 آپلود ویدیو: $SAFE_TITLE"
+              gh release upload "$TAG_NAME" "$FINAL_FILE" \
+                --repo "${{ github.repository }}" \
+                --clobber
+              
+              # ثبت در آرشیو
+              echo "$video_id" >> downloaded.txt
+              echo "✅ ویدیو با موفقیت آپلود شد: $SAFE_TITLE"
+              
+              # پاک کردن فایل موقت
+              rm -f "$FINAL_FILE"
+            else
+              echo "❌ خطا در دانلود ویدیو: $video_id"
+            fi
+            
+            echo "-----------------------------------"
+          done < video_ids.txt
+          
+          # پاک کردن پوشه موقت
+          rm -rf temp_videos
+          
+          echo "🎉 همه ویدیوها پردازش شدن!"
+
+      - name: Update Release body with completion info
+        run: |
+          TOTAL=$(wc -l < video_ids.txt)
+          DOWNLOADED=$(wc -l < downloaded.txt)
+          gh release edit "playlist-v1.0.${{ github.run_number }}" \
+            --notes "## ✅ تکمیل شد!
+            
+            **تعداد کل ویدیوها:** $TOTAL
+            **تعداد دانلود شده:** $DOWNLOADED
+            **کیفیت:** 720p MP4
+            **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
             
             ---
             
-            ### ⚠️ نحوه دانلود و ترکیب فایل‌ها
+            ### 📌 نحوه دانلود
+            هر ویدیو به صورت جداگانه در بخش Assets قابل دانلود است.
             
-            به دلیل محدودیت ۲ گیگابایتی گیت‌هاب، فایل ZIP اصلی به چند بخش تقسیم شده است.
-            
-            **مراحل بعد از دانلود همه بخش‌ها:**
-            
-            1. همه فایل‌های `playlist-part-*.zip` را در یک پوشه خالی دانلود کنید
-            2. فایل `playlist-part-first.zip` را به `playlist-part-00.zip` تغییر نام دهید (اگر چنین نامی ندارد)
-            3. برای ترکیب فایل‌ها در **ویندوز** (Command Prompt):
-               ```cmd
-               copy /b playlist-part-00.zip + playlist-part-01.zip + playlist-part-02.zip full-playlist.zip
+            ### 🔄 ادامه دانلود
+            اگر دفعه بعد دوباره این اکشن رو اجرا کنید، فقط ویدیوهای جدید دانلود می‌شن." \
+            --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit download archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add downloaded.txt
+          git commit -m "Update download archive" || echo "No changes to commit"
+          git push
