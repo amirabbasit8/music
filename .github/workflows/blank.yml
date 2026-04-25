@@ -1,31 +1,56 @@
-name: YouTube to MP3 (Alternative Method)
+name: YouTube MP3 Downloader (Fully Fixed)
 
 on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: 'YouTube URL'
+        description: 'YouTube Video URL'
         required: true
+        default: 'https://www.youtube.com/watch?v=jgFYSWSF84M'
 
 jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: |
-          wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O yt-dlp
-          chmod +x yt-dlp
-      - run: |
-          ./yt-dlp \
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. نصب Deno (برای حل چالش جاوااسکریپت یوتیوب)
+      - name: Install Deno Runtime
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+
+      # 2. نصب ffmpeg
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # 3. دانلود آخرین نسخه Nightly yt-dlp (بسیار مهم)
+      - name: Install Latest yt-dlp Nightly
+        run: |
+          pip install --upgrade pip
+          pip install --pre "yt-dlp[default]"
+
+      # 4. دانلود ویدیو
+      - name: Download as MP3
+        run: |
+          yt-dlp \
             --cookies cookies.txt \
             --extract-audio \
             --audio-format mp3 \
             --audio-quality 320K \
-            --extractor-args "youtube:player_client=android,web" \
             --output "%(title)s.%(ext)s" \
+            --no-playlist \
+            --add-metadata \
+            --embed-thumbnail \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
+            --extractor-args "youtube:player_client=android,web" \
             "${{ github.event.inputs.video_url }}"
-      - uses: actions/upload-artifact@v4
+
+      # 5. آپلود فایل
+      - name: Upload MP3
+        uses: actions/upload-artifact@v4
         with:
-          name: "MP3-File"
+          name: "Final-MP3"
           path: "*.mp3"
+          retention-days: 7
