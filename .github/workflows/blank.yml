@@ -19,6 +19,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /opt/hostedtoolcache
+          df -h /
+
       - name: Install Deno JavaScript Runtime
         run: |
           curl -fsSL https://deno.land/install.sh | sh
@@ -49,16 +58,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # ایجاد پوشه موقت
           mkdir -p temp_videos
           
-          # دریافت لیست ویدیوها با ایندکس و آی‌دی
+          # دریافت لیست ویدیوها با ایندکس و آی‌دی (بدون عنوان در این مرحله)
           ./yt-dlp \
             --cookies cookies.txt \
             --flat-playlist \
-            --print "%(playlist_index)02d - %(title)s" \
-            --print "%(id)s" \
-            "${{ github.event.inputs.playlist_url }}" | paste -d '|' - - > playlist_items.txt
+            --print "%(playlist_index)02d %(id)s" \
+            "${{ github.event.inputs.playlist_url }}" > video_list.txt
           
           # ایجاد Release
           TAG_NAME="playlist-v1.0.${{ github.run_number }}"
@@ -70,19 +77,23 @@ jobs:
           fi
           
           # دانلود و آپلود هر ویدیو
-          while IFS='|' read -r video_title video_id; do
+          while read -r idx video_id; do
             # چک کردن آرشیو
             if grep -Fxq "$video_id" downloaded.txt; then
-              echo "⏭️ رد شدن: $video_title"
+              echo "⏭️ رد شدن ویدیو شماره $idx: $video_id"
               continue
             fi
             
-            echo "📥 دانلود: $video_title ($video_id)"
+            echo "📥 دانلود ویدیو شماره $idx: $video_id"
             
-            # پاک کردن پوشه موقت قبل از هر دانلود
+            # پاک کردن پوشه موقت
             rm -rf temp_videos/*
             
-            # دانلود ویدیو با فرمت دلخواه
+            # دریافت عنوان ویدیو برای اسم فایل (اجرای جداگانه)
+            VIDEO_TITLE=$(./yt-dlp --cookies cookies.txt --get-title "https://www.youtube.com/watch?v=$video_id" 2>/dev/null | head -n1)
+            SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g' | cut -c1-100)
+            
+            # دانلود ویدیو
             ./yt-dlp \
               --cookies cookies.txt \
               --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
@@ -90,15 +101,18 @@ jobs:
               --output "temp_videos/%(title)s.%(ext)s" \
               --no-playlist \
               --remote-components "ejs:npm" \
+              --compat-options manifest-filesize-approx \
               "https://www.youtube.com/watch?v=$video_id"
             
             # پیدا کردن فایل دانلود شده
             VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
             
             if [ -f "$VIDEO_FILE" ]; then
-              # ساخت اسم جدید: 01 - عنوان.mp4 (پاک کردن کاراکترهای غیرمجاز)
-              SAFE_TITLE=$(echo "$video_title" | sed 's/[\/:*?"<>|]/_/g' | sed 's/|/_/g')
-              NEW_NAME="${SAFE_TITLE}.mp4"
+              # ساخت اسم جدید: 01 - عنوان.mp4
+              NEW_NAME="${idx} - ${SAFE_TITLE}.mp4"
+              
+              # حذف فایل با همین اسم اگر وجود داشته باشد
+              rm -f "temp_videos/$NEW_NAME"
               
               # تغییر نام فایل
               mv "$VIDEO_FILE" "temp_videos/$NEW_NAME"
@@ -113,11 +127,11 @@ jobs:
               echo "$video_id" >> downloaded.txt
               echo "✅ آپلود شد: $NEW_NAME"
             else
-              echo "❌ خطا در دانلود: $video_id"
+              echo "❌ خطا در دانلود ویدیو: $video_id"
             fi
             
             echo "-----------------------------------"
-          done < playlist_items.txt
+          done < video_list.txt
           
           rm -rf temp_videos
           echo "🎉 همه ویدیوها دانلود و آپلود شدن!"
