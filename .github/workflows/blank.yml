@@ -19,15 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/share/powershell
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /opt/hostedtoolcache
-          df -h /
-
       - name: Install Deno JavaScript Runtime
         run: |
           curl -fsSL https://deno.land/install.sh | sh
