@@ -1,7 +1,7 @@
 name: Download YouTube as MP3 and Create Release
 
 on:
-  workflow_dispatch:  # اجرای دستی
+  workflow_dispatch:
     inputs:
       video_url:
         description: 'YouTube Video URL'
@@ -13,7 +13,7 @@ jobs:
   download-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # اجازه آپلود در Releases
+      contents: write
     
     steps:
     - name: Checkout repository
@@ -21,13 +21,13 @@ jobs:
     
     - name: Install yt-dlp and ffmpeg
       run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install yt-dlp
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        pip install yt-dlp
     
     - name: Create cookies file
       run: |
-          cat > cookies.txt << 'EOF'
+        cat > cookies.txt << 'EOF'
 # Netscape HTTP Cookie File
 .youtube.com	TRUE	/	TRUE	0	__Secure-BUCKET	CO8C
 .youtube.com	TRUE	/	TRUE	0	SOCS	CAISEwgDEgk4OTk4NzM2MzgaAmVuIAEaBgiA_JrPBg
@@ -55,56 +55,51 @@ EOF
     - name: Get video info
       id: video_info
       run: |
-          VIDEO_TITLE=$(yt-dlp --cookies cookies.txt --get-title "${{ github.event.inputs.video_url }}")
-          # پاک کردن کاراکترهای غیرمجاز برای نام فایل
-          SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
-          echo "title=$SAFE_TITLE" >> $GITHUB_OUTPUT
-          echo "Downloading: $VIDEO_TITLE"
+        VIDEO_TITLE=$(yt-dlp --cookies cookies.txt --get-title "${{ github.event.inputs.video_url }}")
+        SAFE_TITLE=$(echo "$VIDEO_TITLE" | sed 's/[\/:*?"<>|]/_/g')
+        echo "title=$SAFE_TITLE" >> $GITHUB_OUTPUT
+        echo "Downloading: $VIDEO_TITLE"
     
     - name: Download as MP3
       run: |
-          yt-dlp \
-            --cookies cookies.txt \
-            --extract-audio \
-            --audio-format mp3 \
-            --audio-quality 320K \
-            --output "audio_%(title)s.%(ext)s" \
-            --no-playlist \
-            --add-metadata \
-            --metadata-from-title "%(title)s" \
-            --embed-thumbnail \
-            "${{ github.event.inputs.video_url }}"
+        yt-dlp \
+          --cookies cookies.txt \
+          --extract-audio \
+          --audio-format mp3 \
+          --audio-quality 320K \
+          --output "audio_%(title)s.%(ext)s" \
+          --no-playlist \
+          --add-metadata \
+          --embed-thumbnail \
+          "${{ github.event.inputs.video_url }}"
     
     - name: Find MP3 file
       id: find_mp3
       run: |
-          MP3_FILE=$(ls *.mp3 2>/dev/null | head -n 1)
-          if [ -z "$MP3_FILE" ]; then
-            echo "No MP3 file found!"
-            exit 1
-          fi
-          echo "mp3_file=$MP3_FILE" >> $GITHUB_OUTPUT
-          echo "Found: $MP3_FILE"
+        MP3_FILE=$(ls *.mp3 2>/dev/null | head -n 1)
+        if [ -z "$MP3_FILE" ]; then
+          echo "No MP3 file found!"
+          exit 1
+        fi
+        echo "mp3_file=$MP3_FILE" >> $GITHUB_OUTPUT
+        echo "Found: $MP3_FILE"
     
     - name: Create Release
-      id: create_release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: "v1.0.${{ github.run_number }}"
         name: "MP3 - ${{ steps.video_info.outputs.title }}"
         body: |
-          ## 🎵 MP3 دانلود شده از YouTube
+          ## 🎵 MP3 downloaded from YouTube
           
-          - **عنوان:** ${{ steps.video_info.outputs.title }}
-          - **لینک:** ${{ github.event.inputs.video_url }}
-          - **کیفیت:** 320 Kbps MP3
-          - **تاریخ:** $(date +'%Y-%m-%d %H:%M:%S')
-          - **شماره بیلد:** #${{ github.run_number }}
+          - **Title:** ${{ steps.video_info.outputs.title }}
+          - **URL:** ${{ github.event.inputs.video_url }}
+          - **Quality:** 320 Kbps MP3
+          - **Build:** #${{ github.run_number }}
           
-          ### نحوه دانلود:
-          فایل MP3 در بخش Assets پایین صفحه قابل دانلود است.
-        files: |
-          ${{ steps.find_mp3.outputs.mp3_file }}
+          ### Download:
+          The MP3 file is available in the Assets section below.
+        files: ${{ steps.find_mp3.outputs.mp3_file }}
         draft: false
         prerelease: false
       env:
