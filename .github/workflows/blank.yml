@@ -13,8 +13,7 @@ jobs:
   download-playlist:
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # ✅ این خط برای آپلود در Release ضروری است
-      id-token: write          # برای احراز هویت
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -50,67 +49,78 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # ایجاد پوشه موقت
           mkdir -p temp_videos
           
-          # دریافت لیست ویدیوها با شماره و آیدی
+          # دریافت لیست ویدیوها با ایندکس و آی‌دی
           ./yt-dlp \
             --cookies cookies.txt \
             --flat-playlist \
-            --print "%(playlist_index)02d %(id)s" \
-            "${{ github.event.inputs.playlist_url }}" > video_list.txt
+            --print "%(playlist_index)02d - %(title)s" \
+            --print "%(id)s" \
+            "${{ github.event.inputs.playlist_url }}" | paste -d '|' - - > playlist_items.txt
           
+          # ایجاد Release
           TAG_NAME="playlist-v1.0.${{ github.run_number }}"
+          if ! gh release view "$TAG_NAME" --repo "${{ github.repository }}" &>/dev/null; then
+            gh release create "$TAG_NAME" \
+              --title "🎬 دوره کامل زبان انگلیسی - ویدیوهای تکی" \
+              --notes "ویدیوها با شماره‌گذاری از 01 تا 128" \
+              --repo "${{ github.repository }}"
+          fi
           
-          while read -r number video_id; do
+          # دانلود و آپلود هر ویدیو
+          while IFS='|' read -r video_title video_id; do
+            # چک کردن آرشیو
             if grep -Fxq "$video_id" downloaded.txt; then
-              echo "⏭️ رد شدن: $number"
+              echo "⏭️ رد شدن: $video_title"
               continue
             fi
             
-            echo "📥 در حال دانلود شماره $number"
+            echo "📥 دانلود: $video_title ($video_id)"
             
-            # دانلود با اسم شماره‌دار
+            # پاک کردن پوشه موقت قبل از هر دانلود
+            rm -rf temp_videos/*
+            
+            # دانلود ویدیو با فرمت دلخواه
             ./yt-dlp \
               --cookies cookies.txt \
               --format "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" \
               --merge-output-format mp4 \
-              --output "temp_videos/${number}.mp4" \
+              --output "temp_videos/%(title)s.%(ext)s" \
               --no-playlist \
               --remote-components "ejs:npm" \
               "https://www.youtube.com/watch?v=$video_id"
             
-            if [ -f "temp_videos/${number}.mp4" ]; then
-              gh release upload "$TAG_NAME" "temp_videos/${number}.mp4" --repo "${{ github.repository }}" --clobber
+            # پیدا کردن فایل دانلود شده
+            VIDEO_FILE=$(ls temp_videos/*.mp4 2>/dev/null | head -n 1)
+            
+            if [ -f "$VIDEO_FILE" ]; then
+              # ساخت اسم جدید: 01 - عنوان.mp4 (پاک کردن کاراکترهای غیرمجاز)
+              SAFE_TITLE=$(echo "$video_title" | sed 's/[\/:*?"<>|]/_/g' | sed 's/|/_/g')
+              NEW_NAME="${SAFE_TITLE}.mp4"
+              
+              # تغییر نام فایل
+              mv "$VIDEO_FILE" "temp_videos/$NEW_NAME"
+              
+              # آپلود به Release
+              echo "📤 آپلود: $NEW_NAME"
+              gh release upload "$TAG_NAME" "temp_videos/$NEW_NAME" \
+                --repo "${{ github.repository }}" \
+                --clobber
+              
+              # ثبت در آرشیو
               echo "$video_id" >> downloaded.txt
-              rm -f "temp_videos/${number}.mp4"
-              echo "✅ آپلود شد: $number.mp4"
+              echo "✅ آپلود شد: $NEW_NAME"
+            else
+              echo "❌ خطا در دانلود: $video_id"
             fi
-          done < video_list.txt
+            
+            echo "-----------------------------------"
+          done < playlist_items.txt
           
           rm -rf temp_videos
-
-      - name: Update Release body with completion info
-        run: |
-          TOTAL=$(wc -l < video_ids.txt)
-          DOWNLOADED=$(wc -l < downloaded.txt)
-          gh release edit "playlist-v1.0.${{ github.run_number }}" \
-            --notes "## ✅ تکمیل شد!
-            
-            **تعداد کل ویدیوها:** $TOTAL
-            **تعداد دانلود شده:** $DOWNLOADED
-            **کیفیت:** 720p MP4
-            **لینک پلی‌لیست:** ${{ github.event.inputs.playlist_url }}
-            
-            ---
-            
-            ### 📌 نحوه دانلود
-            هر ویدیو به صورت جداگانه در بخش Assets قابل دانلود است.
-            
-            ### 🔄 ادامه دانلود
-            اگر دفعه بعد دوباره این اکشن رو اجرا کنید، فقط ویدیوهای جدید دانلود می‌شن." \
-            --repo "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "🎉 همه ویدیوها دانلود و آپلود شدن!"
 
       - name: Commit download archive
         run: |
